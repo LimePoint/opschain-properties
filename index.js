@@ -1,0 +1,158 @@
+const core = require('@actions/core');
+const github = require('@actions/github');
+
+try {
+  // inputs defined in action metadata file
+  const project = core.getInput('project');
+  console.log(`Project: ${project}`);
+  const environment = core.getInput('environment');
+  console.log(`Environment: ${environment}`);
+  const asset = core.getInput('asset');
+  console.log(`Asset: ${asset}`);
+  const action = core.getInput('action');
+  console.log(`Action: ${action}`);
+  const change_id = core.getInput('change_id');
+  console.log(`Change ID: ${change_id}`);
+  const commit_sha = core.getInput('commit_sha');
+  console.log(`Commit SHA: ${commit_sha}`);
+  const OPSCHAIN_API_URL = core.getInput('opschain_api_url');
+  console.log(`OPSCHAIN_API_URL: ${OPSCHAIN_API_URL}`);
+  const OPSCHAIN_API_TOKEN = core.getInput('opschain_api_token');
+  console.log(`OPSCHAIN_API_TOKEN: ${OPSCHAIN_API_TOKEN}`);
+
+  // Get the JSON webhook payload for the event that triggered the workflow
+  const payload = JSON.stringify(github.context.payload, undefined, 2)
+  console.log(`The event payload: ${payload}`);
+
+  let apiContextUrlString = `${OPSCHAIN_API_URL}/api/projects/${project}`;
+  let apiPropertiesUrlString = `${OPSCHAIN_API_URL}/api/projects/${project}`;
+  if (!!environment) {
+    apiContextUrlString = apiContextUrlString + `/environments/${environment}`;
+    apiPropertiesUrlString = apiPropertiesUrlString + `/environments/${environment}`;
+  }
+  if (!!asset) {
+    apiContextUrlString = apiContextUrlString + `/assets/${asset}`;
+    apiPropertiesUrlString = apiPropertiesUrlString + `/assets/${asset}/converged_properties`;
+  }
+  if (!!change_id) {
+    apiContextUrlString = apiContextUrlString + `/changes/${change_id}`;
+  }
+
+  const apiContextUrl = apiContextUrlString.toString().replace(/["']/g, "");
+  const apiPropertiesUrl = apiPropertiesUrlString.toString().replace(/["']/g, "");
+  const apiKey = `${OPSCHAIN_API_TOKEN}`.toString();
+
+  console.log(`apiContextUrl: ${apiContextUrl}`);
+  console.log(`apiPropertiesUrl: ${apiPropertiesUrl}`);
+  console.log(`apiKey: ${apiKey}`);
+
+  const requestOptions = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': `Basic ${apiKey}`,
+    },
+  };
+
+  core.info('... calling OpsChain API to obtain Configuration for Change with ID: ' + `${change_id}`)
+  fetch(apiContextUrl, requestOptions)
+    .then(response => {
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Data not found');
+        } else if (response.status === 500) {
+          throw new Error('Server error');
+        } else {
+          throw new Error('Network response was not ok');
+        }
+      }
+      return response.json();
+    })
+    .then(data => {
+      const config = JSON.stringify(data.data, null, 2)
+      core.setOutput("context", config);
+      core.setOutput("context_json", JSON.parse(config));
+
+      console.log(`The context payload: ${config}`);
+      // console.log(`The properties relationship payload: ${JSON.stringify(data.data.relationships.properties, null, 2)}`);
+
+      // console.log(`... looking up OpsChain Properties`);
+      // const apiUrlProperties = (`${OPSCHAIN_API_URL}` + '/api/projects/').toString().replace(/["']/g, "");
+      // console.log(`The apiUrlProperties: ${apiUrlProperties}`);
+
+      // Now lets lookup the Properties
+      fetch(apiPropertiesUrl, requestOptions)
+        .then(response => {
+          if (!response.ok) {
+            if (response.status === 404) {
+              throw new Error('Data not found');
+            } else if (response.status === 500) {
+              throw new Error('Server error');
+            } else {
+              throw new Error('Network response was not ok');
+            }
+          }
+          return response.json();
+        })
+        .then(data => {
+          let config = data.data.attributes.data
+          let env = data.data.attributes.data.opschain.env
+          delete config.opschain
+          const all = JSON.stringify(data, null, 2)
+          console.log(`The ALL Properties payload: ${all}`);
+          console.log(`The config payload: ${JSON.stringify(config, null, 2)}`);
+          console.log(`The env payload: ${JSON.stringify(env, null, 2)}`);
+          core.info('... setting GitHub Output (config)')
+          core.setOutput("config", JSON.stringify(config, null, 2));
+          core.setOutput("config_json", config);
+
+          core.setOutput("env", JSON.stringify(env, null, 2));
+          core.setOutput("env_json", env);
+
+          try {
+            core.info('... setting GitHub Environment Variables and Secrets')
+            for (const key in env) {
+              // console.log(`Variable: ${key}: ${env[key]}`);
+              let val = `${env[key]}`;
+              if (`${env[key]}`.toString().startsWith('secret-vault://')) {
+                core.info('  ... Environment Variable [ ' + `${key}` + ' ] contains an OpsChain Secret');
+                // TODO Lookup Secret from OpsChain
+                core.info('    ... getting OpsChain Secret for Key [ ' + `${key}` + ' ]');
+                core.info('        // TODO LOOKUP OPSCHAIN SECRET');
+                val = `${env[key]}`
+                core.info('    ... setting GitHub Secret for Key [' + `${key}` + ' ]');
+                // TODO Set Secret
+                // See https://github.com/actions/toolkit/tree/main/packages/core#setting-a-secret
+                core.setSecret(`${val}`);
+                core.info('    ... GitHub Secret value for Key [' + `${key}` + ' ] is: ' + `${val}`);
+              }
+              core.info('  ... setting GitHub Environment Variable for [ ' + `${key}` + ' ]');
+              // See https://github.com/actions/toolkit/tree/main/packages/core#exporting-variables
+              core.exportVariable(`${key}`, `${val}`);
+              core.info('    ... Environment Variable [' + `${key}` + ' ] value is: ' + `${val}`);
+            }
+
+          }
+          catch (err) {
+            // setFailed logs the message and sets a failing exit code
+            core.setFailed(`Action failed with error ${err}`);
+          }
+
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          core.setFailed(error.message);
+        });
+
+
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      core.setFailed(error.message);
+    });
+  
+} catch (error) {
+  core.setFailed(error.message);
+}
+
