@@ -96,7 +96,7 @@ try {
       });
 
     } else {
-      core.warn('... Input Change ID has not been provided. GitHub Output (context|context_json) skipped.')      
+      core.warning('... Input Change ID has not been provided. GitHub Output (context|context_json) skipped.')      
       core.setOutput("context", "");
       core.setOutput("context_json", "");
       core.setOutput("context_encoded", "");
