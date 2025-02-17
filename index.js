@@ -4,7 +4,7 @@ const github = require('@actions/github');
 try {
   // inputs defined in action metadata file
   const project = core.getInput('project');
-  console.log(`Project: ${project}`);
+  console.info(`Project: ${project}`);
   const environment = core.getInput('environment');
   console.log(`Environment: ${environment}`);
   const asset = core.getInput('asset');
@@ -73,7 +73,7 @@ try {
       const config = JSON.stringify(data.data, null, 2)
 
       const encodedContextString = btoa(config);
-      console.log(encodedContextString);
+      console.debug(encodedContextString);
 
       core.info('... setting GitHub Output (context|context_json)')
       core.setOutput("context", config);
@@ -112,7 +112,7 @@ try {
           console.debug(`The env payload: ${JSON.stringify(env, null, 2)}`);
 
           const encodedConfigString = btoa(JSON.stringify(config, null, 2));
-          console.log(encodedConfigString);
+          console.debug(encodedConfigString);
 
           core.info('... setting GitHub Output (config|config_json)')
           core.setOutput("config", JSON.stringify(config, null, 2));
@@ -120,7 +120,7 @@ try {
           core.setOutput("config_encoded", encodedConfigString);
 
           const encodedEnvString = btoa(JSON.stringify(env, null, 2));
-          console.log(encodedEnvString);
+          console.debug(encodedEnvString);
 
           core.info('... setting GitHub Output (env|env_json)')
           core.setOutput("env", JSON.stringify(env, null, 2));
@@ -130,7 +130,7 @@ try {
           try {
             core.info('... setting GitHub Environment Variables and Secrets')
             for (const key in env) {
-              // console.log(`Variable: ${key}: ${env[key]}`);
+              // console.debug(`Variable: ${key}: ${env[key]}`);
               let val = `${env[key]}`;
               if (`${env[key]}`.toString().startsWith('secret-vault://')) {
                 core.info('  ... Environment Variable [ ' + `${key}` + ' ] contains an OpsChain Secret');
