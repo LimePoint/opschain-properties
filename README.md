@@ -76,15 +76,15 @@ on:
       action:
         type: string
         description: 'Action'
-        required: true
+        required: false
       change_id:
         type: string
         description: 'OpsChain Change ID Reference'
-        required: true
+        required: false
       commit_sha:
         type: string
         description: 'OpsChain Git Commit Sha'
-        required: true
+        required: false
 ```
 
 ## Example usage
@@ -115,15 +115,15 @@ on:
       action:
         type: string
         description: 'Action'
-        required: true
+        required: false
       change_id:
         type: string
         description: 'OpsChain Change ID Reference'
-        required: true
+        required: false
       commit_sha:
         type: string
         description: 'OpsChain Git Commit Sha'
-        required: true
+        required: false
 env:
   AZ_TENANT_ID: 'UNKNOWN'  
   AZ_SUBSCRIPTION_ID: 'UNKNOWN'  

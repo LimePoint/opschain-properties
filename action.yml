@@ -27,11 +27,11 @@ inputs:
       change_id:
         type: string
         description: 'OpsChain Change ID Reference'
-        required: true
+        required: false
       commit_sha:
         type: string
         description: 'OpsChain Git Commit Sha'
-        required: true
+        required: false
       opschain_api_url:
         type: string
         description: 'OpsChain API URL'
