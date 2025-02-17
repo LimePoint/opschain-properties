@@ -22,7 +22,7 @@ try {
 
   // Get the JSON webhook payload for the event that triggered the workflow
   const payload = JSON.stringify(github.context.payload, undefined, 2)
-  console.log(`The event payload: ${payload}`);
+  console.debug(`The event payload: ${payload}`);
 
   let apiContextUrlString = `${OPSCHAIN_API_URL}/api/projects/${project}`;
   let apiPropertiesUrlString = `${OPSCHAIN_API_URL}/api/projects/${project}`;
@@ -42,9 +42,9 @@ try {
   const apiPropertiesUrl = apiPropertiesUrlString.toString().replace(/["']/g, "");
   const apiKey = `${OPSCHAIN_API_TOKEN}`.toString();
 
-  console.log(`apiContextUrl: ${apiContextUrl}`);
-  console.log(`apiPropertiesUrl: ${apiPropertiesUrl}`);
-  console.log(`apiKey: ${apiKey}`);
+  console.debug(`apiContextUrl: ${apiContextUrl}`);
+  console.debug(`apiPropertiesUrl: ${apiPropertiesUrl}`);
+  console.debug(`apiKey: ${apiKey}`);
 
   const requestOptions = {
     method: 'GET',
@@ -71,15 +71,18 @@ try {
     })
     .then(data => {
       const config = JSON.stringify(data.data, null, 2)
+
+      core.info('... setting GitHub Output (context|context_json)')
       core.setOutput("context", config);
       core.setOutput("context_json", JSON.parse(config));
 
-      console.log(`The context payload: ${config}`);
-      // console.log(`The properties relationship payload: ${JSON.stringify(data.data.relationships.properties, null, 2)}`);
+      console.debug(`The context payload: ${config}`);
 
-      // console.log(`... looking up OpsChain Properties`);
+      // Note: relationships on properties only persisted AFTER change completion.
+      // console.debug(`The properties relationship payload: ${JSON.stringify(data.data.relationships.properties, null, 2)}`);
+      // console.debug(`... looking up OpsChain Properties`);
       // const apiUrlProperties = (`${OPSCHAIN_API_URL}` + '/api/projects/').toString().replace(/["']/g, "");
-      // console.log(`The apiUrlProperties: ${apiUrlProperties}`);
+      // console.debug(`The apiUrlProperties: ${apiUrlProperties}`);
 
       // Now lets lookup the Properties
       fetch(apiPropertiesUrl, requestOptions)
@@ -100,13 +103,15 @@ try {
           let env = data.data.attributes.data.opschain.env
           delete config.opschain
           const all = JSON.stringify(data, null, 2)
-          console.log(`The ALL Properties payload: ${all}`);
-          console.log(`The config payload: ${JSON.stringify(config, null, 2)}`);
-          console.log(`The env payload: ${JSON.stringify(env, null, 2)}`);
-          core.info('... setting GitHub Output (config)')
+          console.debug(`The ALL Properties payload: ${all}`);
+          console.debug(`The config payload: ${JSON.stringify(config, null, 2)}`);
+          console.debug(`The env payload: ${JSON.stringify(env, null, 2)}`);
+
+          core.info('... setting GitHub Output (config|config_json)')
           core.setOutput("config", JSON.stringify(config, null, 2));
           core.setOutput("config_json", config);
 
+          core.info('... setting GitHub Output (env|env_json)')
           core.setOutput("env", JSON.stringify(env, null, 2));
           core.setOutput("env_json", env);
 

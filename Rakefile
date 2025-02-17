@@ -58,11 +58,11 @@ def tag_and_process_repos(repos)
 end
 
 PUBLIC_REPOS = %w[
-  opschain-github
+  opschain-properties
 ].freeze
 
-def private_repo_name(repo)
-  "#{repo}-private"
+def private_repo_name
+  "github-action-opschain-properties-private"
 end
 
 def tag_exists?(tag)
@@ -76,7 +76,7 @@ def squash_and_publish_repo(public_repo, tag)
   FileUtils.mkdir_p 'tmp'
   Dir.chdir 'tmp' do
     clone_repo(public_repo) do
-      sh "git remote add private-repo #{BASE_REPO_PATH}#{private_repo_name(public_repo)}.git"
+      sh "git remote add private-repo #{BASE_REPO_PATH}#{private_repo_name}.git"
       sh 'git fetch --force --tags private-repo'
       if tag_exists?(tag)
         sh 'git rm -rf . || true'
@@ -85,7 +85,7 @@ def squash_and_publish_repo(public_repo, tag)
         sh "git diff --cached --quiet || git commit -m 'OpsChain GitHub Plugin Release - #{tag}.'"
         tag_and_push(tag)
       else
-        warn "Tag #{tag} not found in repository #{private_repo_name(public_repo)}."
+        warn "Tag #{tag} not found in repository #{private_repo_name}."
       end
     end
   end
