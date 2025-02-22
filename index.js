@@ -146,22 +146,27 @@ try {
           for (const key in env) {
             // console.debug(`Variable: ${key}: ${env[key]}`);
             let val = `${env[key]}`;
-            if (`${env[key]}`.toString().startsWith('secret-vault://')) {
-              core.info('  ... Environment Variable [ ' + `${key}` + ' ] contains an OpsChain Secret');
-              // TODO Lookup Secret from OpsChain
-              core.info('    ... getting OpsChain Secret for Key [ ' + `${key}` + ' ]');
-              core.info('        // TODO LOOKUP OPSCHAIN SECRET');
-              val = `${env[key]}`
-              core.info('    ... setting GitHub Secret for Key [' + `${key}` + ' ]');
-              // TODO Set Secret
-              // See https://github.com/actions/toolkit/tree/main/packages/core#setting-a-secret
-              core.setSecret(`${val}`);
-              core.info('    ... GitHub Secret value for Key [' + `${key}` + ' ] is: ' + `${val}`);
+            if (`${env[key]}`.toString().startsWith('GITHUB')) {
+              // Variable is a GITHUB_ variable. Do not export/set these ones
+              core.info('  ... Environment Variable [ ' + `${key}` + ' ] is a GITHUB_ variable. Skipping.');
+            } else {
+              if (`${env[key]}`.toString().startsWith('secret-vault://')) {
+                core.info('  ... Environment Variable [ ' + `${key}` + ' ] contains an OpsChain Secret');
+                // TODO Lookup Secret from OpsChain
+                core.info('    ... getting OpsChain Secret for Key [ ' + `${key}` + ' ]');
+                core.info('        // TODO LOOKUP OPSCHAIN SECRET');
+                val = `${env[key]}`
+                core.info('    ... setting GitHub Secret for Key [' + `${key}` + ' ]');
+                // TODO Set Secret
+                // See https://github.com/actions/toolkit/tree/main/packages/core#setting-a-secret
+                core.setSecret(`${val}`);
+                core.info('    ... GitHub Secret value for Key [' + `${key}` + ' ] is: ' + `${val}`);
+              }
+              core.info('  ... setting GitHub Environment Variable for [ ' + `${key}` + ' ]');
+              // See https://github.com/actions/toolkit/tree/main/packages/core#exporting-variables
+              core.exportVariable(`${key}`, `${val}`);
+              core.info('    ... Environment Variable [' + `${key}` + ' ] value is: ' + `${val}`);
             }
-            core.info('  ... setting GitHub Environment Variable for [ ' + `${key}` + ' ]');
-            // See https://github.com/actions/toolkit/tree/main/packages/core#exporting-variables
-            core.exportVariable(`${key}`, `${val}`);
-            core.info('    ... Environment Variable [' + `${key}` + ' ] value is: ' + `${val}`);
           }
 
         }
