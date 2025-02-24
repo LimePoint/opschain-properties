@@ -152,9 +152,9 @@ try {
             } else {
               if (`${env[key]}`.toString().startsWith('secret-vault://')) {
                 core.info('  ... Environment Variable [ ' + `${key}` + ' ] contains an OpsChain Secret');
-                // TODO Lookup Secret from OpsChain
                 core.info('    ... getting OpsChain Secret for Key [ ' + `${key}` + ' ]');
-                core.info('        // TODO LOOKUP OPSCHAIN SECRET');
+                // TODO Lookup Secret from OpsChain
+                // TODO LOOKUP OPSCHAIN SECRET
                 val = `${env[key]}`
                 core.info('    ... setting GitHub Secret for Key [' + `${key}` + ' ]');
                 // TODO Set Secret
