@@ -146,7 +146,7 @@ try {
           for (const key in env) {
             // console.debug(`Variable: ${key}: ${env[key]}`);
             let val = `${env[key]}`;
-            if (`${env[key]}`.toString().startsWith('GITHUB')) {
+            if (`${key}`.toString().startsWith('GITHUB_'))  {
               // Variable is a GITHUB_ variable. Do not export/set these ones
               core.info('  ... Environment Variable [ ' + `${key}` + ' ] is a GITHUB_ variable. Skipping.');
             } else {
