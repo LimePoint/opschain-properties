@@ -157,13 +157,14 @@ try {
                 // TODO LOOKUP OPSCHAIN SECRET
                 val = `${env[key]}`
                 core.info('    ... setting GitHub Secret for Key [' + `${key}` + ' ]');
-                // TODO Set Secret
+                // Set GitHub Secret
                 // See https://github.com/actions/toolkit/tree/main/packages/core#setting-a-secret
                 core.setSecret(`${val}`);
                 core.info('    ... GitHub Secret value for Key [' + `${key}` + ' ] is: ' + `${val}`);
               }
               core.info('  ... setting GitHub Environment Variable for [ ' + `${key}` + ' ]');
               // See https://github.com/actions/toolkit/tree/main/packages/core#exporting-variables
+              // Export GitHub Variable
               core.exportVariable(`${key}`, `${val}`);
               core.info('    ... Environment Variable [' + `${key}` + ' ] value is: ' + `${val}`);
             }
