@@ -119,6 +119,12 @@ try {
       .then(data => {
         let config = data.data.attributes.data
         let env = data.data.attributes.data.opschain.env
+        for (const key in env) {
+          if (`${key}`.toString().startsWith('GITHUB_')) {
+            core.info('... stripping ENV Variable [ ' + `${key}` + ' ] from GitHub Output')
+            delete env[key]
+          }
+        }
         delete config.opschain
         const all = JSON.stringify(data, null, 2)
         console.debug(`The ALL Properties payload: ${all}`);
@@ -137,6 +143,7 @@ try {
         console.debug(encodedEnvString);
 
         core.info('... setting GitHub Output (env|env_json)')
+        // Strip variables starting with GITHUB_
         core.setOutput("env", JSON.stringify(env, null, 2));
         core.setOutput("env_json", env);
         core.setOutput("env_encoded", encodedEnvString);
