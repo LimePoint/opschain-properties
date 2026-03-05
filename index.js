@@ -1,189 +1,143 @@
 const core = require('@actions/core');
 const github = require('@actions/github');
 
-try {
+async function run() {
   // inputs defined in action metadata file
   const project = core.getInput('project');
-  console.info(`Project: ${project}`);
+  core.info(`Project: ${project}`);
   const environment = core.getInput('environment');
-  console.log(`Environment: ${environment}`);
+  core.info(`Environment: ${environment}`);
   const asset = core.getInput('asset');
-  console.log(`Asset: ${asset}`);
+  core.info(`Asset: ${asset}`);
   const action = core.getInput('action');
-  console.log(`Action: ${action}`);
+  core.info(`Action: ${action}`);
   const change_id = core.getInput('change_id');
-  console.log(`Change ID: ${change_id}`);
+  core.info(`Change ID: ${change_id}`);
   const commit_sha = core.getInput('commit_sha');
-  console.log(`Commit SHA: ${commit_sha}`);
+  core.info(`Commit SHA: ${commit_sha}`);
   const OPSCHAIN_API_URL = core.getInput('opschain_api_url');
-  console.log(`OPSCHAIN_API_URL: ${OPSCHAIN_API_URL}`);
+  core.info(`OPSCHAIN_API_URL: ${OPSCHAIN_API_URL}`);
   const OPSCHAIN_API_TOKEN = core.getInput('opschain_api_token');
-  console.log(`OPSCHAIN_API_TOKEN: ${OPSCHAIN_API_TOKEN}`);
+  core.setSecret(OPSCHAIN_API_TOKEN);
 
   // Get the JSON webhook payload for the event that triggered the workflow
-  const payload = JSON.stringify(github.context.payload, undefined, 2)
-  console.debug(`The event payload: ${payload}`);
+  const payload = JSON.stringify(github.context.payload, undefined, 2);
+  core.debug(`The event payload: ${payload}`);
 
   let apiContextUrlString = `${OPSCHAIN_API_URL}/api/projects/${project}`;
   let apiPropertiesUrlString = `${OPSCHAIN_API_URL}/api/projects/${project}`;
-  if (!!environment) {
-    apiContextUrlString = apiContextUrlString + `/environments/${environment}`;
-    apiPropertiesUrlString = apiPropertiesUrlString + `/environments/${environment}`;
+  if (environment) {
+    apiContextUrlString += `/environments/${environment}`;
+    apiPropertiesUrlString += `/environments/${environment}`;
   }
-  if (!!asset) {
-    apiContextUrlString = apiContextUrlString + `/assets/${asset}`;
-    apiPropertiesUrlString = apiPropertiesUrlString + `/assets/${asset}/converged_properties`;
+  if (asset) {
+    apiContextUrlString += `/assets/${asset}`;
+    apiPropertiesUrlString += `/assets/${asset}/converged_properties`;
   }
-  if (!!change_id) {
-    apiContextUrlString = apiContextUrlString + `/changes/${change_id}`;
+  if (change_id) {
+    apiContextUrlString += `/changes/${change_id}`;
   }
 
-  const apiContextUrl = apiContextUrlString.toString().replace(/["']/g, "");
-  const apiPropertiesUrl = apiPropertiesUrlString.toString().replace(/["']/g, "");
-  const apiKey = `${OPSCHAIN_API_TOKEN}`.toString();
+  const apiContextUrl = apiContextUrlString.replace(/["']/g, "");
+  const apiPropertiesUrl = apiPropertiesUrlString.replace(/["']/g, "");
 
-  console.debug(`apiContextUrl: ${apiContextUrl}`);
-  console.debug(`apiPropertiesUrl: ${apiPropertiesUrl}`);
-  console.debug(`apiKey: ${apiKey}`);
+  core.debug(`apiContextUrl: ${apiContextUrl}`);
+  core.debug(`apiPropertiesUrl: ${apiPropertiesUrl}`);
 
   const requestOptions = {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': `Basic ${apiKey}`,
+      'Authorization': `Basic ${OPSCHAIN_API_TOKEN}`,
     },
   };
 
-  if (!!change_id) {
-    core.info('... calling OpsChain API to obtain Configuration for Change with ID: ' + `${change_id}`)
-    fetch(apiContextUrl, requestOptions)
-      .then(response => {
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Data not found');
-          } else if (response.status === 500) {
-            throw new Error('Server error');
-          } else {
-            throw new Error('Network response was not ok');
-          }
-        }
-        return response.json();
-      })
-      .then(data => {
-        const config = JSON.stringify(data.data, null, 2)
+  // Fetch Change Context
+  if (change_id) {
+    core.info('... calling OpsChain API to obtain Configuration for Change with ID: ' + change_id);
+    const data = await fetchJson(apiContextUrl, requestOptions);
+    const contextString = JSON.stringify(data.data, null, 2);
+    const encodedContextString = Buffer.from(contextString).toString('base64');
+    core.debug(encodedContextString);
 
-        const encodedContextString = Buffer.from(config).toString('base64');
-        console.debug(encodedContextString);
+    core.info('... setting GitHub Output (context|context_json|context_encoded)');
+    core.setOutput("context", contextString);
+    core.setOutput("context_json", data.data);
+    core.setOutput("context_encoded", encodedContextString);
 
-        core.info('... setting GitHub Output (context|context_json)')
-        core.setOutput("context", config);
-        core.setOutput("context_json", JSON.parse(config));
-        core.setOutput("context_encoded", encodedContextString);
+    core.debug(`The context payload: ${contextString}`);
+  } else {
+    core.warning('... Input Change ID has not been provided. GitHub Output (context|context_json) skipped.');
+    core.setOutput("context", "");
+    core.setOutput("context_json", "");
+    core.setOutput("context_encoded", "");
+  }
 
-        console.debug(`The context payload: ${config}`);
+  // Fetch Properties (Config and Environment Variable Properties)
+  const data = await fetchJson(apiPropertiesUrl, requestOptions);
+  const config = { ...data.data.attributes.data };
+  const env = { ...config.opschain.env };
+  delete config.opschain;
 
-        // Note: relationships on properties only persisted AFTER change completion.
-        // console.debug(`The properties relationship payload: ${JSON.stringify(data.data.relationships.properties, null, 2)}`);
-        // console.debug(`... looking up OpsChain Properties`);
-        // const apiUrlProperties = (`${OPSCHAIN_API_URL}` + '/api/projects/').toString().replace(/["']/g, "");
-        // console.debug(`The apiUrlProperties: ${apiUrlProperties}`);
-
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        core.setFailed(error.message);
-      });
-
-    } else {
-      core.warning('... Input Change ID has not been provided. GitHub Output (context|context_json) skipped.')      
-      core.setOutput("context", "");
-      core.setOutput("context_json", "");
-      core.setOutput("context_encoded", "");
+  // Strip GITHUB_ prefixed variables
+  for (const key in env) {
+    if (key.startsWith('GITHUB_')) {
+      core.info('... stripping ENV Variable [ ' + key + ' ] from GitHub Output');
+      delete env[key];
     }
+  }
 
-    // Now lets lookup the Properties (Config and Environment Variable Properties)
-    fetch(apiPropertiesUrl, requestOptions)
-      .then(response => {
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Data not found');
-          } else if (response.status === 500) {
-            throw new Error('Server error');
-          } else {
-            throw new Error('Network response was not ok');
-          }
-        }
-        return response.json();
-      })
-      .then(data => {
-        let config = data.data.attributes.data
-        let env = data.data.attributes.data.opschain.env
-        for (const key in env) {
-          if (`${key}`.toString().startsWith('GITHUB_')) {
-            core.info('... stripping ENV Variable [ ' + `${key}` + ' ] from GitHub Output')
-            delete env[key]
-          }
-        }
-        delete config.opschain
-        const all = JSON.stringify(data, null, 2)
-        console.debug(`The ALL Properties payload: ${all}`);
-        console.debug(`The config payload: ${JSON.stringify(config, null, 2)}`);
-        console.debug(`The env payload: ${JSON.stringify(env, null, 2)}`);
+  core.debug(`The ALL Properties payload: ${JSON.stringify(data, null, 2)}`);
+  core.debug(`The config payload: ${JSON.stringify(config, null, 2)}`);
+  core.debug(`The env payload: ${JSON.stringify(env, null, 2)}`);
 
-        const encodedConfigString = Buffer.from(JSON.stringify(config, null, 2)).toString('base64');
-        console.debug(encodedConfigString);
+  const encodedConfigString = Buffer.from(JSON.stringify(config, null, 2)).toString('base64');
+  core.debug(encodedConfigString);
 
-        core.info('... setting GitHub Output (config|config_json)')
-        core.setOutput("config", JSON.stringify(config, null, 2));
-        core.setOutput("config_json", config);
-        core.setOutput("config_encoded", encodedConfigString);
+  core.info('... setting GitHub Output (config|config_json|config_encoded)');
+  core.setOutput("config", JSON.stringify(config, null, 2));
+  core.setOutput("config_json", config);
+  core.setOutput("config_encoded", encodedConfigString);
 
-        const encodedEnvString = Buffer.from(JSON.stringify(env, null, 2)).toString('base64');
-        console.debug(encodedEnvString);
+  const encodedEnvString = Buffer.from(JSON.stringify(env, null, 2)).toString('base64');
+  core.debug(encodedEnvString);
 
-        core.info('... setting GitHub Output (env|env_json)')
-        // Strip variables starting with GITHUB_
-        core.setOutput("env", JSON.stringify(env, null, 2));
-        core.setOutput("env_json", env);
-        core.setOutput("env_encoded", encodedEnvString);
+  core.info('... setting GitHub Output (env|env_json|env_encoded)');
+  core.setOutput("env", JSON.stringify(env, null, 2));
+  core.setOutput("env_json", env);
+  core.setOutput("env_encoded", encodedEnvString);
 
-        try {
-          core.info('... setting GitHub Environment Variables and Secrets')
-          for (const key in env) {
-            // console.debug(`Variable: ${key}: ${env[key]}`);
-            let val = `${env[key]}`;
-            if (`${env[key]}`.toString().startsWith('secret-vault://')) {
-              core.info('  ... Environment Variable [ ' + `${key}` + ' ] contains an OpsChain Secret');
-              core.info('    ... getting OpsChain Secret for Key [ ' + `${key}` + ' ]');
-              // TODO Lookup Secret from OpsChain
-              // TODO LOOKUP OPSCHAIN SECRET
-              val = `${env[key]}`
-              core.info('    ... setting GitHub Secret for Key [' + `${key}` + ' ]');
-              // Set GitHub Secret
-              // See https://github.com/actions/toolkit/tree/main/packages/core#setting-a-secret
-              core.setSecret(`${val}`);
-              core.info('    ... GitHub Secret value for Key [' + `${key}` + ' ] is: ' + `${val}`);
-            }
-            core.info('  ... setting GitHub Environment Variable for [ ' + `${key}` + ' ]');
-            // See https://github.com/actions/toolkit/tree/main/packages/core#exporting-variables
-            // Export GitHub Variable
-            core.exportVariable(`${key}`, `${val}`);
-            core.info('    ... Environment Variable [' + `${key}` + ' ] value is: ' + `${val}`);
-          }
-        }
-        catch (err) {
-          // setFailed logs the message and sets a failing exit code
-          core.setFailed(`Action failed with error ${err}`);
-        }
-
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        core.setFailed(error.message);
-      });
-  
-} catch (error) {
-  core.setFailed(error.message);
+  // Set GitHub Environment Variables and Secrets
+  core.info('... setting GitHub Environment Variables and Secrets');
+  for (const key in env) {
+    let val = String(env[key]);
+    if (val.startsWith('secret-vault://')) {
+      core.info('  ... Environment Variable [ ' + key + ' ] contains an OpsChain Secret');
+      core.info('    ... getting OpsChain Secret for Key [ ' + key + ' ]');
+      // TODO Lookup Secret from OpsChain
+      core.info('    ... setting GitHub Secret for Key [' + key + ' ]');
+      core.setSecret(val);
+    }
+    core.info('  ... setting GitHub Environment Variable for [ ' + key + ' ]');
+    core.exportVariable(key, val);
+  }
 }
 
+async function fetchJson(url, options) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error(`Data not found (404) for ${url}`);
+    } else if (response.status === 500) {
+      throw new Error(`Server error (500) for ${url}`);
+    } else {
+      throw new Error(`HTTP ${response.status} for ${url}`);
+    }
+  }
+  return response.json();
+}
+
+run().catch(error => {
+  core.setFailed(error.message);
+});
