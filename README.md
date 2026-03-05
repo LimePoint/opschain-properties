@@ -48,6 +48,8 @@ The OpsChain ENV variable Properties are available in an output value called `en
 
 **Note:** ENV variable properties are set as GitHub Environment variables and will be accessible via the standard `env.ENV_VARIABLE` notation in your GitHub workflow.
 
+**Important:** When referencing JSON outputs in bash `run` steps, always pass them via the step's `env` block rather than inline `${{ }}` expressions. Inline substitution of JSON containing quotes or special characters will cause shell syntax errors. See the example workflow below for the correct pattern.
+
 ## Important Notes
 
 GitHub workflows that supports the `workflow_dispatch` event may be triggered from OpsChain directly. The inputs will automatically be passed to your Github workflow from OpsChain.
@@ -181,37 +183,47 @@ jobs:
 
       - name: Print OpsChain Configuration
         shell: bash
+        env:
+          OPSCHAIN_CONTEXT: ${{ steps.opschain.outputs.context }}
+          OPSCHAIN_CONTEXT_JSON: ${{ steps.opschain.outputs.context_json }}
+          OPSCHAIN_CONTEXT_ENCODED: ${{ steps.opschain.outputs.context_encoded }}
+          OPSCHAIN_CONFIG: ${{ steps.opschain.outputs.config }}
+          OPSCHAIN_CONFIG_JSON: ${{ steps.opschain.outputs.config_json }}
+          OPSCHAIN_CONFIG_ENCODED: ${{ steps.opschain.outputs.config_encoded }}
+          OPSCHAIN_ENV: ${{ steps.opschain.outputs.env }}
+          OPSCHAIN_ENV_JSON: ${{ steps.opschain.outputs.env_json }}
+          OPSCHAIN_ENV_ENCODED: ${{ steps.opschain.outputs.env_encoded }}
         run: |
           echo "... Printing OpsChain Configuration"
           echo "+==================================================+"
-          echo "Change Context: ${{ steps.opschain.outputs.context }}"
+          echo "Change Context: $OPSCHAIN_CONTEXT"
           echo "--------"
-          echo "Change Context (JSON): ${{ steps.opschain.outputs.context_json }}"
+          echo "Change Context (JSON): $OPSCHAIN_CONTEXT_JSON"
           echo "--------"
-          echo "Change Context (Encoded): ${{ steps.opschain.outputs.context_encoded }}"
+          echo "Change Context (Encoded): $OPSCHAIN_CONTEXT_ENCODED"
           echo "--------"
-          echo "${{ steps.opschain.outputs.context_encoded }}" | base64 -d
+          echo "$OPSCHAIN_CONTEXT_ENCODED" | base64 -d
           echo "........................."
-          echo "Configuration: ${{ steps.opschain.outputs.config }}"
+          echo "Configuration: $OPSCHAIN_CONFIG"
           echo "--------"
-          echo "Configuration (JSON): ${{ steps.opschain.outputs.config_json }}"
+          echo "Configuration (JSON): $OPSCHAIN_CONFIG_JSON"
           echo "--------"
-          echo "Configuration (Encoded): ${{ steps.opschain.outputs.config_encoded }}"
+          echo "Configuration (Encoded): $OPSCHAIN_CONFIG_ENCODED"
           echo "--------"
-          echo "${{ steps.opschain.outputs.config_encoded }}" | base64 -d
+          echo "$OPSCHAIN_CONFIG_ENCODED" | base64 -d
           echo "........................."
-          echo "ENV Variables: ${{ steps.opschain.outputs.env }}"
+          echo "ENV Variables: $OPSCHAIN_ENV"
           echo "--------"
-          echo "ENV Variables (JSON): ${{ steps.opschain.outputs.env_json }}"
+          echo "ENV Variables (JSON): $OPSCHAIN_ENV_JSON"
           echo "--------"
-          echo "ENV Variables (Encoded): ${{ steps.opschain.outputs.env_encoded }}"
+          echo "ENV Variables (Encoded): $OPSCHAIN_ENV_ENCODED"
           echo "--------"
-          echo "${{ steps.opschain.outputs.env_encoded }}" | base64 -d
+          echo "$OPSCHAIN_ENV_ENCODED" | base64 -d
           echo "--------"
-          echo "ENV[AZ_TENANT_ID] is: ${{ env.AZ_TENANT_ID }}"
-          echo "ENV[AZ_SUBSCRIPTION_ID] is: ${{ env.AZ_SUBSCRIPTION_ID }}"
-          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_ID] is: ${{ env.AZ_SERVICE_PRINCIPAL_CLIENT_ID }}"
-          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_SECRET] is: ${{ env.AZ_SERVICE_PRINCIPAL_CLIENT_SECRET }}"
+          echo "ENV[AZ_TENANT_ID] is: $AZ_TENANT_ID"
+          echo "ENV[AZ_SUBSCRIPTION_ID] is: $AZ_SUBSCRIPTION_ID"
+          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_ID] is: $AZ_SERVICE_PRINCIPAL_CLIENT_ID"
+          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_SECRET] is: $AZ_SERVICE_PRINCIPAL_CLIENT_SECRET"
           echo "+==================================================+"
 ```
 
