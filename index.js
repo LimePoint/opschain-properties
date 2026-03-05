@@ -73,7 +73,7 @@ try {
       .then(data => {
         const config = JSON.stringify(data.data, null, 2)
 
-        const encodedContextString = btoa(config);
+        const encodedContextString = Buffer.from(config).toString('base64');
         console.debug(encodedContextString);
 
         core.info('... setting GitHub Output (context|context_json)')
@@ -131,7 +131,7 @@ try {
         console.debug(`The config payload: ${JSON.stringify(config, null, 2)}`);
         console.debug(`The env payload: ${JSON.stringify(env, null, 2)}`);
 
-        const encodedConfigString = btoa(JSON.stringify(config, null, 2));
+        const encodedConfigString = Buffer.from(JSON.stringify(config, null, 2)).toString('base64');
         console.debug(encodedConfigString);
 
         core.info('... setting GitHub Output (config|config_json)')
@@ -139,7 +139,7 @@ try {
         core.setOutput("config_json", config);
         core.setOutput("config_encoded", encodedConfigString);
 
-        const encodedEnvString = btoa(JSON.stringify(env, null, 2));
+        const encodedEnvString = Buffer.from(JSON.stringify(env, null, 2)).toString('base64');
         console.debug(encodedEnvString);
 
         core.info('... setting GitHub Output (env|env_json)')
