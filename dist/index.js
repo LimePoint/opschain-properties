@@ -32450,16 +32450,16 @@ async function fetchChange(client, changeId) {
 
 ;// CONCATENATED MODULE: ./src/properties.ts
 async function fetchConvergedProperties(client, projectCode, assetCode) {
-    const { data, error, response } = await client.fetcher.GET("/api/projects/{project_code}/assets/{asset_code}/converged_properties", {
-        params: { path: { project_code: projectCode, asset_code: assetCode } },
-    });
-    if (!data) {
-        const body = typeof error === "string" ? error : JSON.stringify(error ?? {});
+    const path = `/api/projects/${encodeURIComponent(projectCode)}/assets/${encodeURIComponent(assetCode)}/converged_properties`;
+    const response = await client.transport.request("GET", path);
+    if (!response.ok) {
+        const body = await response.text().catch(() => "");
         const requestId = response.headers.get("x-request-id");
         const idSuffix = requestId ? ` request_id=${requestId}` : "";
         throw new Error(`Failed to fetch converged_properties (HTTP ${response.status}) on ${response.url}${idSuffix}: ${body}`);
     }
-    const attributesData = data?.data?.attributes?.data;
+    const body = (await response.json());
+    const attributesData = body?.data?.attributes?.data;
     if (!attributesData || typeof attributesData !== "object") {
         throw new Error("Unexpected converged_properties response shape: missing data.attributes.data");
     }

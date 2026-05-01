@@ -10,19 +10,11 @@ export async function fetchConvergedProperties(
   projectCode: string,
   assetCode: string,
 ): Promise<ConvergedProperties> {
-  const { data, error, response } = await client.fetcher.GET(
-    "/api/projects/{project_code}/assets/{asset_code}/converged_properties",
-    {
-      params: { path: { project_code: projectCode, asset_code: assetCode } },
-    },
-  ) as {
-    data?: { data?: { attributes?: { data?: unknown } } };
-    error?: unknown;
-    response: Response;
-  };
+  const path = `/api/projects/${encodeURIComponent(projectCode)}/assets/${encodeURIComponent(assetCode)}/converged_properties`;
+  const response = await client.transport.request("GET", path);
 
-  if (!data) {
-    const body = typeof error === "string" ? error : JSON.stringify(error ?? {});
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
     const requestId = response.headers.get("x-request-id");
     const idSuffix = requestId ? ` request_id=${requestId}` : "";
     throw new Error(
@@ -30,7 +22,8 @@ export async function fetchConvergedProperties(
     );
   }
 
-  const attributesData = data?.data?.attributes?.data;
+  const body = (await response.json()) as { data?: { attributes?: { data?: unknown } } };
+  const attributesData = body?.data?.attributes?.data;
   if (!attributesData || typeof attributesData !== "object") {
     throw new Error("Unexpected converged_properties response shape: missing data.attributes.data");
   }
