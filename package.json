@@ -1,19 +1,26 @@
 {
-    "name": "github-action-opschain-properties",
-    "version": "1.0.0",
-    "main": "index.js",
-    "scripts":
-    {
-        "test": "echo \"Error: no test specified\" && exit 1"
-    },
-    "keywords":
-    [],
-    "author": "LimePoint Pty Ltd",
-    "license": "SEE LICENSE IN [LICENCE]",
-    "description": "",
-    "dependencies":
-    {
-        "@actions/core": "^1.11.1",
-        "@actions/github": "^6.0.0"
-    }
+  "name": "github-action-opschain-properties",
+  "version": "2.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [],
+  "author": "LimePoint Pty Ltd",
+  "license": "SEE LICENSE IN LICENCE",
+  "description": "GitHub Action: fetch OpsChain converged properties and change context for use in workflows.",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@opschain/api-client": "file:../opschain-api-client-typescript-sdk"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vercel/ncc": "^0.38.3",
+    "typescript": "^5.6.0"
+  }
 }

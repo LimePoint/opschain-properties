@@ -5,42 +5,33 @@ branding:
   icon: 'share-2'
   color: 'green'
 inputs:
-      project:
-        # The value of this parameter is a string specifying the data type of the input. 
-        # This must be one of: boolean, choice, number, environment or string.
-        type: string
-        description: 'Project Code'
-        required: true
-      environment:
-        # type: environment
-        type: string
-        description: 'Environment Code'
-        required: false
-      asset:
-        type: string
-        description: 'Asset Code'
-        required: true
-      action:
-        type: string
-        description: 'Action'
-        required: true
-      change_id:
-        type: string
-        description: 'OpsChain Change ID Reference'
-        required: false
-      commit_sha:
-        type: string
-        description: 'OpsChain Git Commit Sha'
-        required: false
-      opschain_api_url:
-        type: string
-        description: 'OpsChain API URL'
-        required: true
-      opschain_api_token:
-        type: string
-        description: 'OpsChain API Token'
-        required: true
-
+  project:
+    type: string
+    description: 'Project Code'
+    required: true
+  environment:
+    type: string
+    description: 'Environment Code (informational; not used in URL construction)'
+    required: false
+  asset:
+    type: string
+    description: 'Asset Code'
+    required: true
+  change_id:
+    type: string
+    description: 'OpsChain Change ID Reference'
+    required: false
+  commit_sha:
+    type: string
+    description: 'OpsChain Git Commit SHA'
+    required: false
+outputs:
+  context:
+    description: 'JSON-stringified change object (empty string when change_id is not provided)'
+  config:
+    description: 'JSON-stringified converged config (with the opschain key removed)'
+  env:
+    description: 'JSON-stringified env map (with GITHUB_* keys removed)'
 runs:
   using: 'node20'
-  main: 'index.js'
+  main: 'dist/index.js'

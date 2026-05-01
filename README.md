@@ -1,229 +1,111 @@
 # OpsChain Properties Action
 
-This action downloads the Configuration Properties from OpsChain Change that can be referenced and used within GitHub Actions Jobs and Steps
+This action downloads converged configuration properties from OpsChain so they can be referenced and used within GitHub Actions jobs and steps.
+
+> **v2:** rebuilt on the official [`@opschain/api-client`](https://github.com/limepoint/opschain-api-client-typescript-sdk) TypeScript SDK. Authentication is now driven by environment variables (no longer action inputs), and the output surface is simplified. See **[Migrating from v1](#migrating-from-v1)** below.
 
 ## Inputs
 
-### `project`
+| Input        | Required | Description                                                  |
+|--------------|----------|--------------------------------------------------------------|
+| `project`    | yes      | OpsChain project code                                        |
+| `asset`      | yes      | OpsChain asset code                                          |
+| `environment`| no       | OpsChain environment code (informational; not used in URL)   |
+| `change_id`  | no       | OpsChain change ID; if omitted, the `context` output is `""` |
+| `commit_sha` | no       | Git commit SHA (informational)                               |
 
-**Required** The OpsChain Project Code
+## Authentication (environment variables)
 
-### `environment`
+Set the following on the workflow, job, or step `env:` block. They are typically populated from organization-level GitHub Secrets.
 
-**Optional** The OpsChain Environment Code
+| Env var                     | Required | Default        | Notes                                              |
+|-----------------------------|----------|----------------|----------------------------------------------------|
+| `OPSCHAIN_API_URL`          | yes      | —              | Base URL of the OpsChain instance                  |
+| `OPSCHAIN_USERNAME`         | yes      | —              | OpsChain username                                  |
+| `OPSCHAIN_PASSWORD`         | yes      | —              | OpsChain password                                  |
+| `OPSCHAIN_API_AUTH_SCHEME`  | no       | `bearerAuth`   | One of `bearerAuth`, `basicAuth`, `cookieAuth`     |
 
-### `asset`
-
-**Optional** The OpsChain Asset Code
-
-### `change_id`
-
-**Optional** The OpsChain Change ID
-
-### `commit_sha`
-
-**Optional** The OpsChain Commit SHA used
-
-### `opschain_api_url`
-
-**Required** The OpsChain API URL Endpoint
-
-### `opschain_api_token`
-
-**Required** The OpsChain API Authentication Token
+`bearerAuth` (default) exchanges username/password for a JWT via `POST /api/tokens/access_token` and auto-refreshes on 401. `basicAuth` sends `Authorization: Basic ...` on every request. `cookieAuth` exchanges credentials once and replays the resulting `Set-Cookie` value as a `Cookie` header on subsequent requests; **note that cookieAuth does not auto-refresh on 401**, so a cookie that expires mid-run will surface as `Unauthorized`.
 
 ## Outputs
 
-### `context | context_json | context_encoded`
+| Output    | Value                                                                     |
+|-----------|---------------------------------------------------------------------------|
+| `context` | JSON-stringified change object, or `""` when `change_id` is omitted       |
+| `config`  | JSON-stringified converged config (with the `opschain` key removed)       |
+| `env`     | JSON-stringified env map (with `GITHUB_*` keys removed)                   |
 
-The OpsChain Change Context is available in an output value called `context`. This is available as a JSON string, JSON object, or Base64 Encoded string.
+In addition to setting these outputs, the action exports each `env` entry as a GitHub workflow environment variable via `core.exportVariable`, so subsequent steps can reference them as `${{ env.MY_VAR }}`. Values starting with `secret-vault://` are masked in logs via `core.setSecret`.
 
-### `config | config_json | config_encoded`
+> **Important:** when consuming JSON outputs in shell `run` steps, pass them via the step's `env:` block rather than inline `${{ }}` substitution. Inline substitution of JSON containing quotes or special characters causes shell syntax errors. See the example below.
 
-The OpsChain Asset Properties are available in an output value called `config`. This is available as a JSON string, JSON object, or Base64 Encoded string.
-
-### `env | env_json | env_encoded`
-
-The OpsChain ENV variable Properties are available in an output value called `env`. This is available as a JSON string, JSON object, or Base64 Encoded string.
-
-**Note:** ENV variable properties are set as GitHub Environment variables and will be accessible via the standard `env.ENV_VARIABLE` notation in your GitHub workflow.
-
-**Important:** When referencing JSON outputs in bash `run` steps, always pass them via the step's `env` block rather than inline `${{ }}` expressions. Inline substitution of JSON containing quotes or special characters will cause shell syntax errors. See the example workflow below for the correct pattern.
-
-## Important Notes
-
-GitHub workflows that supports the `workflow_dispatch` event may be triggered from OpsChain directly. The inputs will automatically be passed to your Github workflow from OpsChain.
-
-In order to do so, please ensure your Workflow has the following `inputs` defined:
+## Example workflow
 
 ```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      project:
-        # The value of this parameter is a string specifying the data type of the input. 
-        # This must be one of: boolean, choice, number, environment or string.
-        type: string
-        description: 'Project Code'
-        required: true
-      environment:
-        # type: environment
-        type: string
-        description: 'Environment Code'
-        required: false
-      asset:
-        type: string
-        description: 'Asset Code'
-        required: true
-      action:
-        type: string
-        description: 'Action'
-        required: false
-      change_id:
-        type: string
-        description: 'OpsChain Change ID Reference'
-        required: false
-      commit_sha:
-        type: string
-        description: 'OpsChain Git Commit Sha'
-        required: false
-```
-
-## Example usage
-
-Workflow Example below.
-
-```yaml
-name: test
+name: opschain-context-demo
 
 on:
   workflow_dispatch:
     inputs:
-      project:
-        # The value of this parameter is a string specifying the data type of the input. 
-        # This must be one of: boolean, choice, number, environment or string.
-        type: string
-        description: 'Project Code'
-        required: true
-      environment:
-        # type: environment
-        type: string
-        description: 'Environment Code'
-        required: false
-      asset:
-        type: string
-        description: 'Asset Code'
-        required: true
-      action:
-        type: string
-        description: 'Action'
-        required: false
-      change_id:
-        type: string
-        description: 'OpsChain Change ID Reference'
-        required: false
-      commit_sha:
-        type: string
-        description: 'OpsChain Git Commit Sha'
-        required: false
-env:
-  AZ_TENANT_ID: 'UNKNOWN'  
-  AZ_SUBSCRIPTION_ID: 'UNKNOWN'  
-  AZ_SERVICE_PRINCIPAL_CLIENT_ID: 'UNKNOWN'  
-  AZ_SERVICE_PRINCIPAL_CLIENT_SECRET: 'UNKNOWN'  
+      project: { type: string, required: true }
+      environment: { type: string, required: false }
+      asset: { type: string, required: true }
+      change_id: { type: string, required: false }
+      commit_sha: { type: string, required: false }
 
 jobs:
-
-  print_initial_env:
-    name: Print Workflow ENV Variables (Initial)
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Print Workflow ENV Variables
-        shell: bash
-        run: |
-          echo "... Printing Workflow ENV Variables"
-          echo "+==================================================+"
-          echo "ENV[AZ_TENANT_ID] is: ${{ env.AZ_TENANT_ID }}"
-          echo "ENV[AZ_SUBSCRIPTION_ID] is: ${{ env.AZ_SUBSCRIPTION_ID }}"
-          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_ID] is: ${{ env.AZ_SERVICE_PRINCIPAL_CLIENT_ID }}"
-          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_SECRET] is: ${{ env.AZ_SERVICE_PRINCIPAL_CLIENT_SECRET }}"
-          echo "+==================================================+"
-
-  # Get Configration Properties from OpsChain
   opschain:
     name: OpsChain Configuration
-    needs: print_initial_env
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: OpsChain Configuration
+      - name: Fetch OpsChain configuration
         id: opschain
-        uses: limepoint/opschain-properties@v1
+        uses: limepoint/opschain-properties@v2
+        env:
+          OPSCHAIN_API_URL: ${{ secrets.OPSCHAIN_API_URL }}
+          OPSCHAIN_USERNAME: ${{ secrets.OPSCHAIN_USERNAME }}
+          OPSCHAIN_PASSWORD: ${{ secrets.OPSCHAIN_PASSWORD }}
+          # OPSCHAIN_API_AUTH_SCHEME: bearerAuth   # default; omit unless overriding
         with:
-          project: "${{inputs.project}}"
-          environment: "${{inputs.environment}}"
-          asset: "${{inputs.asset}}"
-          change_id: "${{inputs.change_id}}"
-          commit_sha: "${{inputs.commit_sha}}"
-          opschain_api_url: "${{secrets.OPSCHAIN_API_URL}}"
-          opschain_api_token: "${{secrets.OPSCHAIN_API_TOKEN}}"
+          project: ${{ inputs.project }}
+          environment: ${{ inputs.environment }}
+          asset: ${{ inputs.asset }}
+          change_id: ${{ inputs.change_id }}
+          commit_sha: ${{ inputs.commit_sha }}
 
-      - name: Print Workflow Inputs
-        run: |
-          echo "... Workflow Inputs"
-          echo "........................."
-          echo "Project: "${{ inputs.project }} 
-          echo "Environment: "${{ inputs.environment }} 
-          echo "Asset: "${{ inputs.asset }} 
-          echo "Action: "${{ inputs.action }} 
-          echo "Change ID: "${{ inputs.change_id }} 
-          echo "Commit SHA: "${{ inputs.commit_sha }}
-          echo "...done."
-
-      - name: Print OpsChain Configuration
+      - name: Use OpsChain configuration
         shell: bash
         env:
           OPSCHAIN_CONTEXT: ${{ steps.opschain.outputs.context }}
-          OPSCHAIN_CONTEXT_JSON: ${{ steps.opschain.outputs.context_json }}
-          OPSCHAIN_CONTEXT_ENCODED: ${{ steps.opschain.outputs.context_encoded }}
           OPSCHAIN_CONFIG: ${{ steps.opschain.outputs.config }}
-          OPSCHAIN_CONFIG_JSON: ${{ steps.opschain.outputs.config_json }}
-          OPSCHAIN_CONFIG_ENCODED: ${{ steps.opschain.outputs.config_encoded }}
           OPSCHAIN_ENV: ${{ steps.opschain.outputs.env }}
-          OPSCHAIN_ENV_JSON: ${{ steps.opschain.outputs.env_json }}
-          OPSCHAIN_ENV_ENCODED: ${{ steps.opschain.outputs.env_encoded }}
         run: |
-          echo "... Printing OpsChain Configuration"
-          echo "+==================================================+"
-          echo "Change Context: $OPSCHAIN_CONTEXT"
-          echo "--------"
-          echo "Change Context (JSON): $OPSCHAIN_CONTEXT_JSON"
-          echo "--------"
-          echo "Change Context (Encoded): $OPSCHAIN_CONTEXT_ENCODED"
-          echo "--------"
-          echo "$OPSCHAIN_CONTEXT_ENCODED" | base64 -d
-          echo "........................."
-          echo "Configuration: $OPSCHAIN_CONFIG"
-          echo "--------"
-          echo "Configuration (JSON): $OPSCHAIN_CONFIG_JSON"
-          echo "--------"
-          echo "Configuration (Encoded): $OPSCHAIN_CONFIG_ENCODED"
-          echo "--------"
-          echo "$OPSCHAIN_CONFIG_ENCODED" | base64 -d
-          echo "........................."
-          echo "ENV Variables: $OPSCHAIN_ENV"
-          echo "--------"
-          echo "ENV Variables (JSON): $OPSCHAIN_ENV_JSON"
-          echo "--------"
-          echo "ENV Variables (Encoded): $OPSCHAIN_ENV_ENCODED"
-          echo "--------"
-          echo "$OPSCHAIN_ENV_ENCODED" | base64 -d
-          echo "--------"
-          echo "ENV[AZ_TENANT_ID] is: $AZ_TENANT_ID"
-          echo "ENV[AZ_SUBSCRIPTION_ID] is: $AZ_SUBSCRIPTION_ID"
-          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_ID] is: $AZ_SERVICE_PRINCIPAL_CLIENT_ID"
-          echo "ENV[AZ_SERVICE_PRINCIPAL_CLIENT_SECRET] is: $AZ_SERVICE_PRINCIPAL_CLIENT_SECRET"
-          echo "+==================================================+"
+          echo "Change context: $OPSCHAIN_CONTEXT"
+          echo "Config:         $OPSCHAIN_CONFIG"
+          echo "Env map:        $OPSCHAIN_ENV"
+          # Env vars from the env map are also auto-exported, e.g.:
+          # echo "MY_OPSCHAIN_VAR=$MY_OPSCHAIN_VAR"
 ```
 
+To consume an output as a structured object inside a YAML expression, use `fromJSON()`:
+
+```yaml
+- run: echo "DB host = ${{ fromJSON(steps.opschain.outputs.config).database.host }}"
+```
+
+## Migrating from v1
+
+| v1                                                  | v2                                                                  |
+|-----------------------------------------------------|---------------------------------------------------------------------|
+| `with: opschain_api_url: ...`                       | `env: OPSCHAIN_API_URL: ...`                                        |
+| `with: opschain_api_token: ...` (base64 Basic-Auth) | `env: OPSCHAIN_USERNAME / OPSCHAIN_PASSWORD` (default `bearerAuth`) |
+| `with: action: ...`                                 | input removed (was never read by v1)                                |
+| `outputs.context_json` / `_encoded`                 | `outputs.context` (drop `_json` / `_encoded` siblings)              |
+| `outputs.config_json` / `_encoded`                  | `outputs.config`                                                    |
+| `outputs.env_json` / `_encoded`                     | `outputs.env`                                                       |
+| `${{ steps.x.outputs.config_json.foo }}`            | `${{ fromJSON(steps.x.outputs.config).foo }}`                       |
+| `echo $OPSCHAIN_CONFIG_ENCODED \| base64 -d`        | Pass `OPSCHAIN_CONFIG` via the step `env:` block (no decode needed) |
+| `uses: limepoint/opschain-properties@v1`            | `uses: limepoint/opschain-properties@v2`                            |
+
+The `environment` input is still accepted but is no longer used in URL construction (the converged_properties endpoint takes only `project_code` and `asset_code`).

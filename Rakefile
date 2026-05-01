@@ -31,7 +31,7 @@ def release_tag
 end
 
 def release_version
-  return "v1"
+  return "v2"
 end
 
 def date_tag
