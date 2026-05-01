@@ -28,8 +28,9 @@ async function run(): Promise<void> {
     core.setOutput("context", "");
   }
 
-  core.info(`Fetching converged properties for project=${project} asset=${asset}`);
-  const { config, env } = await fetchConvergedProperties(client, project, asset);
+  const envSuffix = environment ? ` environment=${environment}` : "";
+  core.info(`Fetching converged properties for project=${project}${envSuffix} asset=${asset}`);
+  const { config, env } = await fetchConvergedProperties(client, project, asset, environment || undefined);
 
   core.setOutput("config", JSON.stringify(config));
   core.setOutput("env", JSON.stringify(env));

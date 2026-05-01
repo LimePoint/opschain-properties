@@ -10,7 +10,7 @@ This action downloads converged configuration properties from OpsChain so they c
 |--------------|----------|--------------------------------------------------------------|
 | `project`    | yes      | OpsChain project code                                        |
 | `asset`      | yes      | OpsChain asset code                                          |
-| `environment`| no       | OpsChain environment code (informational; not used in URL)   |
+| `environment`| no       | OpsChain environment code; when set, scopes converged_properties to `/projects/{project}/environments/{environment}/assets/{asset}/converged_properties` |
 | `change_id`  | no       | OpsChain change ID; if omitted, the `context` output is `""` |
 | `commit_sha` | no       | Git commit SHA (informational)                               |
 
@@ -108,4 +108,4 @@ To consume an output as a structured object inside a YAML expression, use `fromJ
 | `echo $OPSCHAIN_CONFIG_ENCODED \| base64 -d`        | Pass `OPSCHAIN_CONFIG` via the step `env:` block (no decode needed) |
 | `uses: limepoint/opschain-properties@v1`            | `uses: limepoint/opschain-properties@v2`                            |
 
-The `environment` input is still accepted but is no longer used in URL construction (the converged_properties endpoint takes only `project_code` and `asset_code`).
+The `environment` input, when provided, scopes the converged_properties request to the env-nested path (matching v1 behavior). When omitted, the request goes to the project/asset path only.

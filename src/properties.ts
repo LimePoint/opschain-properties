@@ -9,8 +9,18 @@ export async function fetchConvergedProperties(
   client: OpsChainClient,
   projectCode: string,
   assetCode: string,
+  environmentCode?: string,
 ): Promise<ConvergedProperties> {
-  const path = `/api/projects/${encodeURIComponent(projectCode)}/assets/${encodeURIComponent(assetCode)}/converged_properties`;
+  const segments = [
+    "api",
+    "projects",
+    encodeURIComponent(projectCode),
+  ];
+  if (environmentCode) {
+    segments.push("environments", encodeURIComponent(environmentCode));
+  }
+  segments.push("assets", encodeURIComponent(assetCode), "converged_properties");
+  const path = "/" + segments.join("/");
   const response = await client.transport.request("GET", path);
 
   if (!response.ok) {

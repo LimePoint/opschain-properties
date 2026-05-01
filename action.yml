@@ -11,7 +11,7 @@ inputs:
     required: true
   environment:
     type: string
-    description: 'Environment Code (informational; not used in URL construction)'
+    description: 'Environment Code (when provided, scopes the converged_properties request to /environments/{environment})'
     required: false
   asset:
     type: string

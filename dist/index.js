@@ -32449,8 +32449,17 @@ async function fetchChange(client, changeId) {
 }
 
 ;// CONCATENATED MODULE: ./src/properties.ts
-async function fetchConvergedProperties(client, projectCode, assetCode) {
-    const path = `/api/projects/${encodeURIComponent(projectCode)}/assets/${encodeURIComponent(assetCode)}/converged_properties`;
+async function fetchConvergedProperties(client, projectCode, assetCode, environmentCode) {
+    const segments = [
+        "api",
+        "projects",
+        encodeURIComponent(projectCode),
+    ];
+    if (environmentCode) {
+        segments.push("environments", encodeURIComponent(environmentCode));
+    }
+    segments.push("assets", encodeURIComponent(assetCode), "converged_properties");
+    const path = "/" + segments.join("/");
     const response = await client.transport.request("GET", path);
     if (!response.ok) {
         const body = await response.text().catch(() => "");
@@ -32519,8 +32528,9 @@ async function run() {
         warning("change_id not provided; context output will be empty");
         setOutput("context", "");
     }
-    info(`Fetching converged properties for project=${project} asset=${asset}`);
-    const { config, env } = await fetchConvergedProperties(client, project, asset);
+    const envSuffix = environment ? ` environment=${environment}` : "";
+    info(`Fetching converged properties for project=${project}${envSuffix} asset=${asset}`);
+    const { config, env } = await fetchConvergedProperties(client, project, asset, environment || undefined);
     setOutput("config", JSON.stringify(config));
     setOutput("env", JSON.stringify(env));
     info("Exporting OpsChain env vars to GitHub workflow environment");
