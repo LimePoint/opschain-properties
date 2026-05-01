@@ -15,7 +15,7 @@
   "license": "SEE LICENSE IN LICENCE",
   "description": "GitHub Action: fetch OpsChain converged properties and change context for use in workflows.",
   "dependencies": {
-    "@actions/core": "^1.11.1",
+    "@actions/core": "^3.0.1",
     "@opschain/api-client": "file:../opschain-api-client-typescript-sdk"
   },
   "devDependencies": {
