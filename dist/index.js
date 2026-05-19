@@ -31922,8 +31922,8 @@ var AdminAPI = class extends Resource {
 
 // src/_generatedVersion.ts
 var API_VERSION = "v1";
-var SPEC_REVISION = "2026-04-30+a0c7c265";
-var SPEC_SHA256 = "a0c7c26524a1fb897a09e088d270d35f9c5bef184d04b6de4095b0067509d9e0";
+var SPEC_REVISION = "2026-05-19+6ce42a4f";
+var SPEC_SHA256 = "6ce42a4f826f63079fedf13c3642d126a184b2e176187ab06aff29f42df38183";
 var GENERATOR_NAME = "openapi-typescript";
 var GENERATOR_VERSION = "7.5.0";
 
