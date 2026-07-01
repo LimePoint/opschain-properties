@@ -33,5 +33,5 @@ outputs:
   env:
     description: 'JSON-stringified env map (with GITHUB_* keys removed)'
 runs:
-  using: 'node20'
+  using: 'node24'
   main: 'dist/index.js'

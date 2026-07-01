@@ -13,7 +13,7 @@ export class AuthConfigError extends Error {
 export function resolveAuthOptions(): TransportOptions {
   const baseUrl = process.env.OPSCHAIN_API_URL?.trim();
   const username = process.env.OPSCHAIN_USERNAME?.trim();
-  const password = process.env.OPSCHAIN_PASSWORD;
+  const password = process.env.OPSCHAIN_PASSWORD?.trim();
   const rawScheme = process.env.OPSCHAIN_API_AUTH_SCHEME?.trim() || "bearerAuth";
 
   if (!VALID_SCHEMES.includes(rawScheme as AuthScheme)) {

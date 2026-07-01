@@ -31830,6 +31830,14 @@ var EventsAPI = class extends Resource {
   iter(params) {
     return paginate(this.t, "/api/events", { params });
   }
+  /**
+   * Publish an event via POST /api/events. The event's semantic type (e.g.
+   * "servicenow:incident.updated") and any other fields are passed as
+   * attributes; the /api/events body carries no JSON:API resource type.
+   */
+  async create(attributes) {
+    return unwrapOne(await this.postJson("/api/events", attrsPayload(attributes)));
+  }
 };
 var AgentsAPI = class extends Resource {
   async list(projectCode) {
@@ -31922,8 +31930,8 @@ var AdminAPI = class extends Resource {
 
 // src/_generatedVersion.ts
 var API_VERSION = "v1";
-var SPEC_REVISION = "2026-05-19+6ce42a4f";
-var SPEC_SHA256 = "6ce42a4f826f63079fedf13c3642d126a184b2e176187ab06aff29f42df38183";
+var SPEC_REVISION = "2026-05-26+3cc27217";
+var SPEC_SHA256 = "3cc27217a09e0c6a5116bbb0a1c1fd086769fb501773e6ea5228cb1c5a3a296b";
 var GENERATOR_NAME = "openapi-typescript";
 var GENERATOR_VERSION = "7.5.0";
 
@@ -32198,19 +32206,28 @@ var Transport = class {
     }
     return void 0;
   }
-  // Issue the Basic-auth POST to /api/tokens/access_token. Used by
-  // both bearerAuth (which reads the JWT from the response) and
-  // cookieAuth (which discards the body and captures Set-Cookie).
+  // POST /api/tokens/access_token with credentials in the JSON:API
+  // request body. Used by both bearerAuth (which reads the JWT from
+  // the response) and cookieAuth (which discards the body and captures
+  // Set-Cookie). The body form is accepted regardless of whether the
+  // server has Basic auth enabled, so this works against deployments
+  // that disable basicAuth.
   async postAccessToken() {
-    const creds = btoa(`${this.username}:${this.password}`);
     return this.fetchImpl(`${this.baseUrl}/api/tokens/access_token`, {
       method: "POST",
       headers: {
         "Content-Type": "application/vnd.api+json",
         Accept: "application/vnd.api+json",
-        Authorization: `Basic ${creds}`,
         "User-Agent": USER_AGENT
-      }
+      },
+      body: JSON.stringify({
+        data: {
+          attributes: {
+            username: this.username,
+            password: this.password
+          }
+        }
+      })
     });
   }
   // Exchange username + password for a JWT bearer.
@@ -32401,7 +32418,7 @@ class AuthConfigError extends Error {
 function resolveAuthOptions() {
     const baseUrl = process.env.OPSCHAIN_API_URL?.trim();
     const username = process.env.OPSCHAIN_USERNAME?.trim();
-    const password = process.env.OPSCHAIN_PASSWORD;
+    const password = process.env.OPSCHAIN_PASSWORD?.trim();
     const rawScheme = process.env.OPSCHAIN_API_AUTH_SCHEME?.trim() || "bearerAuth";
     if (!VALID_SCHEMES.includes(rawScheme)) {
         throw new AuthConfigError(`Invalid OPSCHAIN_API_AUTH_SCHEME: "${rawScheme}". Must be one of: ${VALID_SCHEMES.join(", ")}.`);
