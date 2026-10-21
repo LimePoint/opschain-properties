@@ -109,3 +109,18 @@ To consume an output as a structured object inside a YAML expression, use `fromJ
 | `uses: limepoint/opschain-properties@v1`            | `uses: limepoint/opschain-properties@v2`                            |
 
 The `environment` input, when provided, scopes the converged_properties request to the env-nested path (matching v1 behavior). When omitted, the request goes to the project/asset path only.
+
+## OpsChain v5.2.0 compatibility
+
+From OpsChain v5.2.0-internal the v1 `/api/tokens/*` routes are removed, so
+the client's `bearerAuth` and `cookieAuth` schemes (which acquire tokens via
+`POST /api/tokens/access_token`) no longer work against new servers. The
+action now defaults to `basicAuth` (per-request HTTP Basic), which works on
+both old and new servers — the server's `enable_basic_auth` setting must
+remain on (it is by default). An explicit `OPSCHAIN_API_AUTH_SCHEME`
+environment variable always takes precedence over the `auth_scheme` input.
+
+This is a bridge: the `integrations:github` suite (OpsChain design 53)
+replaces password auth here with GitHub Actions OIDC federation — no
+OpsChain credentials in GitHub secrets at all — at which point this
+action's auth block retires.

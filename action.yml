@@ -25,6 +25,17 @@ inputs:
     type: string
     description: 'OpsChain Git Commit SHA'
     required: false
+  auth_scheme:
+    type: string
+    description: >-
+      OpsChain API auth scheme: basicAuth (default), bearerAuth or cookieAuth.
+      bearerAuth/cookieAuth acquire tokens via the v1 /api/tokens routes,
+      which are REMOVED from OpsChain v5.2.0-internal onward — basicAuth works
+      on both old and new servers until the OIDC-federated suite
+      (integrations:github) replaces password auth entirely. An explicit
+      OPSCHAIN_API_AUTH_SCHEME environment variable always wins over this input.
+    required: false
+    default: 'basicAuth'
 outputs:
   context:
     description: 'JSON-stringified change object (empty string when change_id is not provided)'

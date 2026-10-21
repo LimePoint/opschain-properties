@@ -17,6 +17,11 @@ async function run(): Promise<void> {
   if (changeId) core.info(`Change ID: ${changeId}`);
   if (commitSha) core.info(`Commit SHA: ${commitSha}`);
 
+  if (!process.env.OPSCHAIN_API_AUTH_SCHEME?.trim()) {
+    const schemeInput = core.getInput("auth_scheme");
+    if (schemeInput) process.env.OPSCHAIN_API_AUTH_SCHEME = schemeInput;
+  }
+
   const client = createClient();
 
   if (changeId) {
